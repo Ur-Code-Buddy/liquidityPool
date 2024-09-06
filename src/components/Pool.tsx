@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
+import axios from 'axios';
 
 // Dummy token list for demonstration (you'll need actual token mint addresses)
 const tokenList = [
@@ -9,6 +10,8 @@ const tokenList = [
   { name: 'RAY', address: '4k3Dyjzvzp8eLhHVdBeU67ecWtPqyT4m6tFaYyJ2F4vW' },
   { name: 'SRM', address: '2MsbQKuJHK9tKh7NCYmNYkD2cpbZYVnKsKuTDJtb8JGn' },
 ];
+
+const API_BASE_URL = 'https://api-v3.raydium.io';
 
 const Pool: React.FC = () => {
   const { publicKey, connected } = useWallet();
@@ -32,9 +35,34 @@ const Pool: React.FC = () => {
     }
   }, [publicKey, connected, token1, token2]);
 
+  useEffect(() => {
+    if (publicKey && connected) {
+      // Fetch balance for custom token 1
+      if (customToken1) {
+        fetchTokenBalance(customToken1, setBalance1);
+      }
+    }
+  }, [customToken1]);
+
+  useEffect(() => {
+    if (publicKey && connected) {
+      // Fetch balance for custom token 2
+      if (customToken2) {
+        fetchTokenBalance(customToken2, setBalance2);
+      }
+    }
+  }, [customToken2]);
+
   const fetchTokenBalance = async (tokenAddress: string, setBalance: React.Dispatch<React.SetStateAction<number | null>>) => {
     try {
       if (!publicKey) return;
+  
+      // Handle SOL balance separately
+      if (tokenAddress === tokenList[0].address) { // Assuming SOL address is the first in the list
+        const balance = await connection.getBalance(publicKey);
+        setBalance(balance / 1e9); // Convert from lamports to SOL
+        return;
+      }
       
       const mintPublicKey = new PublicKey(tokenAddress);
       const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, { mint: mintPublicKey });
@@ -49,6 +77,24 @@ const Pool: React.FC = () => {
       console.error('Error fetching token balance:', error);
     }
   };
+  
+
+  const fetchPoolInfo = async (tokenAddress1: string, tokenAddress2: string) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/pools`);
+      const pools = response.data;
+
+      // Find the pool with the selected token pair
+      const pool = pools.find((p: any) => 
+        (p.token1 === tokenAddress1 && p.token2 === tokenAddress2) ||
+        (p.token1 === tokenAddress2 && p.token2 === tokenAddress1)
+      );
+      return pool;
+    } catch (error) {
+      console.error('Error fetching pool info:', error);
+      return null;
+    }
+  };
 
   const handleAddLiquidity = async () => {
     if (!connected || !publicKey) {
@@ -56,14 +102,32 @@ const Pool: React.FC = () => {
       return;
     }
 
-    // Check if user has enough balance
     if (balance1 === null || balance2 === null || parseFloat(amount1) > balance1 || parseFloat(amount2) > balance2) {
       alert('Insufficient balance for the selected tokens');
       return;
     }
 
-    // Add liquidity logic
-    console.log('Add Liquidity with Token Pair:', token1, amount1, token2, amount2);
+    try {
+      const pool = await fetchPoolInfo(token1, token2);
+      if (!pool) {
+        alert('Pool not found for the selected tokens');
+        return;
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/add-liquidity`, {
+        walletAddress: publicKey.toBase58(),
+        poolId: pool.id,
+        token1,
+        amount1,
+        token2,
+        amount2,
+      });
+      console.log('Add Liquidity Response:', response.data);
+      alert('Liquidity added successfully');
+    } catch (error) {
+      console.error('Error adding liquidity:', error);
+      alert('Failed to add liquidity');
+    }
   };
 
   const handleRemoveLiquidity = async () => {
@@ -71,8 +135,26 @@ const Pool: React.FC = () => {
       alert('Please connect your wallet');
       return;
     }
-    // Remove liquidity logic
-    console.log('Remove Liquidity for pair:', token1, token2);
+
+    try {
+      const pool = await fetchPoolInfo(token1, token2);
+      if (!pool) {
+        alert('Pool not found for the selected tokens');
+        return;
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/remove-liquidity`, {
+        walletAddress: publicKey.toBase58(),
+        poolId: pool.id,
+        token1,
+        token2,
+      });
+      console.log('Remove Liquidity Response:', response.data);
+      alert('Liquidity removed successfully');
+    } catch (error) {
+      console.error('Error removing liquidity:', error);
+      alert('Failed to remove liquidity');
+    }
   };
 
   return (
@@ -92,7 +174,13 @@ const Pool: React.FC = () => {
                 Token 1:
                 <select
                   value={token1}
-                  onChange={(e) => setToken1(e.target.value)}
+                  onChange={(e) => {
+                    setToken1(e.target.value);
+                    if (e.target.value === '') {
+                      setCustomToken1('');
+                      setBalance1(null); // Reset balance when custom token is selected
+                    }
+                  }}
                   style={{ margin: '10px', padding: '10px' }}
                 >
                   {tokenList.map((token) => (
@@ -127,7 +215,13 @@ const Pool: React.FC = () => {
                 Token 2:
                 <select
                   value={token2}
-                  onChange={(e) => setToken2(e.target.value)}
+                  onChange={(e) => {
+                    setToken2(e.target.value);
+                    if (e.target.value === '') {
+                      setCustomToken2('');
+                      setBalance2(null); // Reset balance when custom token is selected
+                    }
+                  }}
                   style={{ margin: '10px', padding: '10px' }}
                 >
                   {tokenList.map((token) => (
