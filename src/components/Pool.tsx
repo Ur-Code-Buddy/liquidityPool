@@ -3,7 +3,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection, PublicKey } from '@solana/web3.js';
 import axios from 'axios';
 
-// Dummy token list for demonstration (you'll need actual token mint addresses)
+//token list for demonstration (you'll need actual token mint addresses)
 const tokenList = [
   { name: 'SOL', address: 'So11111111111111111111111111111111111111112' },
   { name: 'USDC', address: 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr' },
@@ -23,6 +23,7 @@ const Pool: React.FC = () => {
   const [balance2, setBalance2] = useState<number | null>(null);
   const [customToken1, setCustomToken1] = useState('');
   const [customToken2, setCustomToken2] = useState('');
+  const [canCreatePool, setCanCreatePool] = useState(false); // New state for pool creation
 
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
@@ -53,6 +54,11 @@ const Pool: React.FC = () => {
     }
   }, [customToken2]);
 
+  useEffect(() => {
+    // Check if both tokens have non-zero balance to enable pool creation
+    setCanCreatePool(balance1 !== null && balance1 > 0 && balance2 !== null && balance2 > 0);
+  }, [balance1, balance2]);
+
   const fetchTokenBalance = async (tokenAddress: string, setBalance: React.Dispatch<React.SetStateAction<number | null>>) => {
     try {
       if (!publicKey) return;
@@ -77,7 +83,6 @@ const Pool: React.FC = () => {
       console.error('Error fetching token balance:', error);
     }
   };
-  
 
   const fetchPoolInfo = async (tokenAddress1: string, tokenAddress2: string) => {
     try {
@@ -157,6 +162,27 @@ const Pool: React.FC = () => {
     }
   };
 
+  const handleCreatePool = async () => {
+    if (!connected || !publicKey) {
+      alert('Please connect your wallet');
+      return;
+    }
+
+    try {
+      // Assuming you have an endpoint for creating pools
+      const response = await axios.post(`${API_BASE_URL}/create-pool`, {
+        walletAddress: publicKey.toBase58(),
+        token1,
+        token2,
+      });
+      console.log('Create Pool Response:', response.data);
+      alert('Pool created successfully');
+    } catch (error) {
+      console.error('Error creating pool:', error);
+      alert('Failed to create pool');
+    }
+  };
+
   return (
     <div style={{ textAlign: 'center', marginTop: '20px' }}>
       <h3>This is running on devnet</h3>
@@ -204,88 +230,99 @@ const Pool: React.FC = () => {
                 type="text"
                 placeholder="Amount"
                 value={amount1}
-                onChange={(e) => setAmount1(e.target.value)}
-                style={{ padding: '10px', margin: '10px' }}
-              />
-              {balance1 !== null && <p>Balance: {balance1}</p>}
-            </div>
-
-            <div>
-              <label>
-                Token 2:
-                <select
-                  value={token2}
-                  onChange={(e) => {
-                    setToken2(e.target.value);
-                    if (e.target.value === '') {
-                      setCustomToken2('');
-                      setBalance2(null); // Reset balance when custom token is selected
-                    }
-                  }}
-                  style={{ margin: '10px', padding: '10px' }}
-                >
-                  {tokenList.map((token) => (
-                    <option key={token.address} value={token.address}>
-                      {token.name}
-                    </option>
-                  ))}
-                  <option value="">Custom Token</option>
-                </select>
-              </label>
-              {token2 === '' && (
-                <input
-                  type="text"
-                  placeholder="Custom Token 2 Address"
-                  value={customToken2}
-                  onChange={(e) => setCustomToken2(e.target.value)}
-                  style={{ padding: '10px', margin: '10px' }}
-                />
-              )}
-              <input
-                type="text"
-                placeholder="Amount"
-                value={amount2}
-                onChange={(e) => setAmount2(e.target.value)}
-                style={{ padding: '10px', margin: '10px' }}
-              />
-              {balance2 !== null && <p>Balance: {balance2}</p>}
-            </div>
-
-            <button
-              onClick={handleAddLiquidity}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
+                onChange={(e) => setAmount1
+                (e.target.value)} style={{ padding: '10px', margin: '10px' }} /> {balance1 !== null && <p>Balance: {balance1}</p>} </div>
+                        <div>
+          <label>
+            Token 2:
+            <select
+              value={token2}
+              onChange={(e) => {
+                setToken2(e.target.value);
+                if (e.target.value === '') {
+                  setCustomToken2('');
+                  setBalance2(null); // Reset balance when custom token is selected
+                }
               }}
+              style={{ margin: '10px', padding: '10px' }}
             >
-              Add Liquidity
-            </button>
-          </div>
-
-          <div>
-            <h4>Remove Liquidity</h4>
-            <button
-              onClick={handleRemoveLiquidity}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: '#f44336',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              Remove Liquidity
-            </button>
-          </div>
+              {tokenList.map((token) => (
+                <option key={token.address} value={token.address}>
+                  {token.name}
+                </option>
+              ))}
+              <option value="">Custom Token</option>
+            </select>
+          </label>
+          {token2 === '' && (
+            <input
+              type="text"
+              placeholder="Custom Token 2 Address"
+              value={customToken2}
+              onChange={(e) => setCustomToken2(e.target.value)}
+              style={{ padding: '10px', margin: '10px' }}
+            />
+          )}
+          <input
+            type="text"
+            placeholder="Amount"
+            value={amount2}
+            onChange={(e) => setAmount2(e.target.value)}
+            style={{ padding: '10px', margin: '10px' }}
+          />
+          {balance2 !== null && <p>Balance: {balance2}</p>}
         </div>
-      ) : (
-        <p>Please connect your wallet to manage liquidity.</p>
-      )}
+
+        <button
+          onClick={handleAddLiquidity}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Add Liquidity
+        </button>
+
+        <button
+          onClick={handleCreatePool}
+          disabled={!canCreatePool}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: canCreatePool ? '#2196F3' : '#9E9E9E',
+            color: 'white',
+            border: 'none',
+            cursor: canCreatePool ? 'pointer' : 'not-allowed',
+            marginLeft: '10px',
+          }}
+        >
+          Create Pool
+        </button>
+      </div>
+
+      <div>
+        <h4>Remove Liquidity</h4>
+        <button
+          onClick={handleRemoveLiquidity}
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#f44336',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          Remove Liquidity
+        </button>
+      </div>
     </div>
-  );
-};
+  ) : (
+    <p>Please connect your wallet to manage liquidity.</p>
+  )}
+</div>
+); };
 
 export default Pool;
+
