@@ -18,6 +18,8 @@ const Pool: React.FC = () => {
   const [token2, setToken2] = useState(tokenList[1].address);
   const [balance1, setBalance1] = useState<number | null>(null);
   const [balance2, setBalance2] = useState<number | null>(null);
+  const [customToken1, setCustomToken1] = useState('');
+  const [customToken2, setCustomToken2] = useState('');
 
   const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
@@ -75,6 +77,8 @@ const Pool: React.FC = () => {
 
   return (
     <div style={{ textAlign: 'center', marginTop: '20px' }}>
+      <h3>This is running on devnet</h3>
+      <h4>Add Your mint address in custom option</h4>
       <h2>Manage Your Liquidity</h2>
       {connected ? (
         <div>
@@ -96,8 +100,18 @@ const Pool: React.FC = () => {
                       {token.name}
                     </option>
                   ))}
+                  <option value="">Custom Token</option>
                 </select>
               </label>
+              {token1 === '' && (
+                <input
+                  type="text"
+                  placeholder="Custom Token 1 Address"
+                  value={customToken1}
+                  onChange={(e) => setCustomToken1(e.target.value)}
+                  style={{ padding: '10px', margin: '10px' }}
+                />
+              )}
               <input
                 type="text"
                 placeholder="Amount"
@@ -121,8 +135,18 @@ const Pool: React.FC = () => {
                       {token.name}
                     </option>
                   ))}
+                  <option value="">Custom Token</option>
                 </select>
               </label>
+              {token2 === '' && (
+                <input
+                  type="text"
+                  placeholder="Custom Token 2 Address"
+                  value={customToken2}
+                  onChange={(e) => setCustomToken2(e.target.value)}
+                  style={{ padding: '10px', margin: '10px' }}
+                />
+              )}
               <input
                 type="text"
                 placeholder="Amount"
