@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import IndexPage from './pages/IndexPage';
 import HomePage from './pages/Homepage';
@@ -10,8 +9,6 @@ import MintTokensPage from './pages/MintTokensPage';
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import {
     WalletModalProvider,
-    WalletDisconnectButton,
-    WalletMultiButton
 } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import SuccessPage from './pages/SuccessPage';

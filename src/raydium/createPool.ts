@@ -1,17 +1,16 @@
 import {
     MARKET_STATE_LAYOUT_V3,
-    AMM_V4,
-    OPEN_BOOK_PROGRAM,
-    FEE_DESTINATION_ID,
+    // AMM_V4,
+    // OPEN_BOOK_PROGRAM,
+    // FEE_DESTINATION_ID,
     DEVNET_PROGRAM_ID,
-} from '@raydium-io/raydium-sdk-v2';
+  } from '@raydium-io/raydium-sdk-v2'
+
 import { initSdk, txVersion } from './config';
 import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import BN from 'bn.js';
 
 interface CreateAmmPoolParams {
-    marketId: PublicKey;
     baseMintInfo: {
         mint: PublicKey;
         decimals: number;
@@ -28,92 +27,86 @@ interface CreateAmmPoolParams {
     };
 }
 
-export const createAmmPool = async ({
-    marketId,
+export const createAmmPoolDevnet = async ({
     baseMintInfo,
     quoteMintInfo,
     baseAmount,
     quoteAmount,
     startTime,
-    ownerInfo,
 }: CreateAmmPoolParams) => {
-    const raydium = await initSdk();
+    try {
+        console.log('Provided Base Mint (Base58):', baseMintInfo.mint.toBase58());
+        console.log('Provided Quote Mint (Base58):', quoteMintInfo.mint.toBase58());
 
-    // Get market information
-    const marketBufferInfo = await raydium.connection.getAccountInfo(marketId);
-    const { baseMint, quoteMint } = MARKET_STATE_LAYOUT_V3.decode(marketBufferInfo!.data);
+        const raydium = await initSdk();
 
-    // Check mint info
-    if (
-        baseMintInfo.mint.toBase58() !== baseMint.toBase58() ||
-        quoteMintInfo.mint.toBase58() !== quoteMint.toBase58()
-    ) {
-        throw new Error('Provided mint information does not match market data.');
-    }
+        // Use Devnet market ID (hardcoded for Devnet)
+        const marketId = new PublicKey('HWy1jotHpo6UqeQxx49dpYYdQB8wj9Qk9MdxwjLvDHB8'); // Devnet Market ID
 
-    if (
-        baseMintInfo.mint.toBase58() !== TOKEN_PROGRAM_ID.toBase58() ||
-        quoteMintInfo.mint.toBase58() !== TOKEN_PROGRAM_ID.toBase58()
-    ) {
-        throw new Error(
-            'AMM pools with OpenBook market only support TOKEN_PROGRAM_ID mints. For token-2022, create a CPMM pool instead.'
+        // Get market information
+        const marketBufferInfo = await raydium.connection.getAccountInfo(new PublicKey(marketId));
+        console.log("market:",marketBufferInfo);
+        const { baseMint, quoteMint } = MARKET_STATE_LAYOUT_V3.decode(marketBufferInfo!.data)
+        console.log("basemint:",baseMint.toBase58());
+        const baseMintInfo_1 = await raydium.token.getTokenInfo(baseMint)
+        const quoteMintInfo_2 = await raydium.token.getTokenInfo(quoteMint)
+
+        console.log("basemindinfo1:",baseMintInfo_1);
+        console.log("basemindinfo2:",quoteMintInfo_2);
+        
+        const baseMint_data  = await raydium.token.getTokenInfo(baseMintInfo.mint.toBase58());
+        console.log("decimals:",baseMintInfo.decimals)
+        const quoteMint_data  = await raydium.token.getTokenInfo(quoteMintInfo.mint.toBase58());
+        console.log("Mint info:",baseMint_data,"\n", quoteMint_data );
+        console.log("AMM Program ID:", DEVNET_PROGRAM_ID.AmmV4.toBase58());
+        console.log("OpenBook Market Program ID:", DEVNET_PROGRAM_ID.OPENBOOK_MARKET.toBase58());
+        console.log("Fee Destination ID:", DEVNET_PROGRAM_ID.FEE_DESTINATION_ID.toBase58());
+
+
+
+        // Proceed to create the pool
+        const { execute, extInfo } = await raydium.liquidity.createPoolV4({
+            programId: DEVNET_PROGRAM_ID.AmmV4, // AMM V4 Program ID
+            marketInfo: {
+                marketId,
+                programId: DEVNET_PROGRAM_ID.OPENBOOK_MARKET,
+            },
+            baseMintInfo: {
+                mint: baseMintInfo.mint,
+                decimals: baseMintInfo.decimals, // Update if necessary
+            },
+            quoteMintInfo: {
+                mint: quoteMintInfo.mint,
+                decimals: baseMintInfo.decimals, // Update if necessary
+            },
+            baseAmount: baseAmount,
+            quoteAmount: quoteAmount,
+            startTime: startTime,
+            ownerInfo: {
+                useSOLBalance: true,
+              },
+            associatedOnly: false,
+            txVersion,
+            feeDestinationId: DEVNET_PROGRAM_ID.FEE_DESTINATION_ID, // Replace with the actual Fee Destination ID if available
+        });
+
+        // Log success details
+        const { txId } = await execute({ sendAndConfirm: true });
+        console.log(
+            'AMM pool created on Devnet!',
+            'Transaction ID:', txId,
+            'Pool Keys:',
+            Object.keys(extInfo.address).reduce(
+                (acc, cur) => ({
+                    ...acc,
+                    [cur]: extInfo.address[cur as keyof typeof extInfo.address].toBase58(),
+                }),
+                {}
+            )
         );
+    } catch (error) {
+        // Log the error
+        console.log("error")
+        throw error; // Re-throw the error after logging
     }
-
-    const { execute, extInfo } = await raydium.liquidity.createPoolV4({
-        programId: AMM_V4,
-        marketInfo: {
-            marketId,
-            programId: OPEN_BOOK_PROGRAM,
-        },
-        baseMintInfo: {
-            mint: baseMintInfo.mint,
-            decimals: baseMintInfo.decimals,
-        },
-        quoteMintInfo: {
-            mint: quoteMintInfo.mint,
-            decimals: quoteMintInfo.decimals,
-        },
-        baseAmount,
-        quoteAmount,
-        startTime,
-        ownerInfo,
-        associatedOnly: false,
-        txVersion,
-        feeDestinationId: FEE_DESTINATION_ID,
-    });
-
-    // Optionally, set sendAndConfirm to false if you don't want to wait for confirmation
-    const { txId } = await execute({ sendAndConfirm: true });
-    console.log(
-        'AMM pool created! txId: ',
-        txId,
-        ', poolKeys:',
-        Object.keys(extInfo.address).reduce(
-            (acc, cur) => ({
-                ...acc,
-                [cur]: extInfo.address[cur as keyof typeof extInfo.address].toBase58(),
-            }),
-            {}
-        )
-    );
 };
-
-/** Uncomment code below to execute */
-// createAmmPool({
-//     marketId: new PublicKey('<your market id here>'),
-//     baseMintInfo: {
-//         mint: new PublicKey('<base mint address here>'),
-//         decimals: 6,
-//     },
-//     quoteMintInfo: {
-//         mint: new PublicKey('<quote mint address here>'),
-//         decimals: 6,
-//     },
-//     baseAmount: new BN(1000),
-//     quoteAmount: new BN(1000),
-//     startTime: new BN(0),
-//     ownerInfo: {
-//         useSOLBalance: true,
-//     },
-// });

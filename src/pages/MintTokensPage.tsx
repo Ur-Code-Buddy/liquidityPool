@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; // Ensure React and useState are imported
+import { useState } from 'react'; // Ensure React and useState are imported
 import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { 

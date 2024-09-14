@@ -22,14 +22,7 @@ const HomePage = () => {
             >
                 Disconnect & Back
             </button>
-            <a 
-                href="https://github.com/raydium-io/raydium-sdk-V2-demo/blob/master/src/amm/createAmmPool.ts" 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="absolute top-4 right-4 px-3 py-1 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition text-xs"
-            >
-                Raydium Demo Code
-            </a>
+            
             <h2 className="text-4xl font-bold text-blue-400 mb-4">Home</h2>
             <div className="w-full max-w-md space-y-4">
                 <Link 
