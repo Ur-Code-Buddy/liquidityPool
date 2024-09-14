@@ -1,38 +1,43 @@
-import { FC, useMemo } from 'react';
-import { WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'; // Updated import
-import { clusterApiUrl } from '@solana/web3.js';
+// src/App.tsx
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import IndexPage from './pages/IndexPage';
+import HomePage from './pages/Homepage';
+import CreatePoolPage from './pages/CreatePoolPage';
+import TransactionStatusPage from './pages/TransactionStatusPage';
 
-import Pool from './components/Pool';
-import '@solana/wallet-adapter-react-ui/styles.css'; // Default styles for wallet button
+// wallet adapter imports
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import {
+    WalletModalProvider,
+    WalletDisconnectButton,
+    WalletMultiButton
+} from '@solana/wallet-adapter-react-ui';
+import '@solana/wallet-adapter-react-ui/styles.css';
 
-const App: FC = () => {
-  const network = 'devnet'; // Use string for network
-  const endpoint = clusterApiUrl(network); // Get the correct endpoint
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(), // Use SolflareWalletAdapter
-    ],
-    []
-  );
+;
+
+function App() {
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
+    <ConnectionProvider endpoint="https://api.devnet.solana.com">
+      <WalletProvider wallets={[]} autoConnect>
         <WalletModalProvider>
-          <div className="App">
-            <header className="App-header">
-              <h1>Liquidity Pool Interface</h1>
-              <WalletMultiButton />
-              <Pool />
-            </header>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: 20 }}>
+            <WalletMultiButton />
+            <WalletDisconnectButton />
           </div>
+          <Router>
+            <Routes>
+              <Route path="/" element={<IndexPage />} />
+              <Route path="/home" element={<HomePage />} />
+              <Route path="/create-pool" element={<CreatePoolPage />} />
+              <Route path="/transaction-status" element={<TransactionStatusPage />} />
+            </Routes>
+          </Router>
         </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );
-};
-
+}
 export default App;
